@@ -57,7 +57,7 @@ export default function Hero() {
     startX: 0, lastX: 0, lastT: 0,
   });
 
-  const cloudY = useTransform(lift, [0, 1], ["105%", "0%"]);
+  const cloudY = useTransform(lift, [0, 1], ["60%", "0%"]);
   const loaderOpacity = useTransform(sky, [0, 0.6], [1, 0]);
   const markScale = useTransform(lift, [0, 1], [WORDMARK_SCALE, 1]);
 
