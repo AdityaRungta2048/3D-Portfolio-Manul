@@ -21,6 +21,19 @@ const assets = [...reel.map((w) => w.cover), skyImg, cloudsImg];
 const LIFT_EASE = [0.5, 0, 0.15, 1] as const;
 const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const [first, ...rest] = person.name.split(" ");
+// Drifting petals: position as a fraction of the stage, drift in px/s, tumble in deg/s.
+const PETAL_COLORS = ["#f4c23a", "#f0922b", "#e0552f", "#f6d36b", "#d8402a"];
+const petals = Array.from({ length: 34 }, (_, i) => ({
+  x: Math.random(),
+  y: Math.random(),
+  vx: 14 + Math.random() * 22,
+  vy: 6 + Math.random() * 12,
+  sway: 10 + Math.random() * 18,
+  phase: Math.random() * 6.3,
+  spin: 0.8 + Math.random() * 1.6,
+  size: 12 + Math.random() * 9,
+  color: PETAL_COLORS[i % PETAL_COLORS.length],
+}));
 const WORDMARK_SCALE = innerWidth < 720 ? 1.8 : 3;
 
 /** Last value written for every per-card style, so unchanged frames write nothing. */
@@ -47,6 +60,8 @@ export default function Hero() {
     cards.map(() => ({ el: null, video: null, t: "", v: "", playing: false })),
   );
   const fit = useRef(1);
+  const size = useRef({ w: 1, h: 1 });
+  const petalEls = useRef<(HTMLElement | null)[]>([]);
   const loaded = useRef(0);
   const done = useRef(false);
   const anims = useRef<AnimationPlaybackControls[]>([]);
@@ -146,6 +161,7 @@ export default function Hero() {
     const el = frame.current!;
     const ro = new ResizeObserver(() => {
       fit.current = Math.min(el.clientHeight / 1180, el.clientWidth / 560);
+      size.current = { w: el.clientWidth, h: el.clientHeight };
     });
     ro.observe(el);
     return () => ro.disconnect();
@@ -181,6 +197,28 @@ export default function Hero() {
         const el = digits.current[k];
         const v = `translateY(${-ds[k] * 10}%)`;
         if (el && v !== digitT[k]) el.style.transform = digitT[k] = v;
+      }
+
+      // Petals only drift once the sky is showing; reduced motion keeps them still.
+      const { w, h } = size.current;
+      const sec = now / 1000;
+      if (sky.get() > 0) {
+        for (let k = 0; k < petals.length; k++) {
+          const p = petals[k];
+          const el = petalEls.current[k];
+          if (!el) continue;
+          if (!reduced) {
+            p.x = (p.x + (p.vx * dt) / w + 1.04) % 1.04;
+            p.y = (p.y + (p.vy * dt) / h + 1.04) % 1.04;
+          }
+          const sx = reduced ? 0 : Math.sin(sec * 0.9 + p.phase) * p.sway;
+          // Tumble part-way rather than fully, so the petal's face keeps showing.
+          const a = reduced ? p.phase : sec * p.spin + p.phase;
+          el.style.transform =
+            `translate3d(${(p.x - 0.02) * w + sx}px,${(p.y - 0.02) * h}px,0) ` +
+            `rotate(${((a * 40) % 360).toFixed(1)}deg) rotateX(${(Math.sin(a) * 60).toFixed(1)}deg) ` +
+            `rotateY(${(Math.cos(a * 0.7) * 45).toFixed(1)}deg)`;
+        }
       }
 
       const live = L > 0.6 && !reduced;
@@ -321,6 +359,16 @@ export default function Hero() {
             </a>
           ))}
         </div>
+
+        <motion.div className="petals" style={{ opacity: sky }} aria-hidden>
+          {petals.map((p, k) => (
+            <i
+              key={k}
+              ref={(el) => void (petalEls.current[k] = el)}
+              style={{ width: p.size, height: p.size * 0.62, background: p.color }}
+            />
+          ))}
+        </motion.div>
 
         <motion.img className="clouds" src={cloudsImg} alt="" style={{ y: cloudY }} draggable={false} />
       </motion.div>
