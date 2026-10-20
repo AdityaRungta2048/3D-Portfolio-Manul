@@ -130,6 +130,14 @@ h1, h2, h3 { font-family: var(--serif); font-weight: 400; line-height: 1.1; marg
   letter-spacing: 0.04em;
 }
 
+.petals { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.petals i {
+  position: absolute; left: 0; top: 0;
+  border-radius: 0 100% 0 100%;
+  will-change: transform;
+  box-shadow: inset -1px -1px 0 #0002;
+}
+
 /* Opaque cloud bank in front of the wheel's lower half; framed exactly like the sky. */
 .clouds {
   position: absolute; inset: 0;
