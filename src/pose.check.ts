@@ -14,9 +14,11 @@ for (let i = 1; i < N; i++) assert.equal(dealOrder(i), dealOrder(N - i));
 for (let i = 0; i < N; i++) assert.equal(pose(i, 0, 0, 0).visible, false);
 assert.equal(pose(N / 2, 1, 1, 0).visible, false);
 
-// Mid-flight the top card is still right of home and face down-ish.
-const mid = pose(0, 0.1, 0, 0);
-assert.ok(mid.angle > 0 && mid.angle < 70);
+// Mid-flight cards rise straight out from the pivot, mirror pairs symmetric.
+const mid = pose(3, 0.2, 0, 0);
+assert.ok(mid.visible && mid.angle > 0);
+assert.equal(pose(N - 3, 0.2, 0, 0).angle, -mid.angle);
+assert.ok(mid.transform.includes("rotateY(") && !mid.transform.includes("rotateY(0deg)"));
 
 // Dealt: top card home, face up, full radius.
 const dealt = pose(0, 1, 0, 0);

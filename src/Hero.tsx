@@ -6,7 +6,9 @@ import {
   type AnimationPlaybackControls,
 } from "framer-motion";
 import { useEffect, useRef, useState, type PointerEvent } from "react";
-import { person, roles, works, type Work } from "./data";
+import skyImg from "./assets/sky.webp";
+import cloudsImg from "./assets/clouds.webp";
+import { experience, person, works, type Work } from "./data";
 import { N, pose } from "./pose";
 
 // Wide banners crop badly to 9:16, so the wheel deals the portrait artwork.
@@ -15,9 +17,11 @@ const reel: Work[] = [
   { title: `About ${person.name}`, category: "Portrait", client: person.title, year: "", cover: person.portrait, href: "#about" },
 ];
 const cards = Array.from({ length: N }, (_, i) => reel[i % reel.length]);
-const covers = reel.map((w) => w.cover);
+const assets = [...reel.map((w) => w.cover), skyImg, cloudsImg];
 const LIFT_EASE = [0.5, 0, 0.15, 1] as const;
 const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const [first, ...rest] = person.name.split(" ");
+const WORDMARK_SCALE = innerWidth < 720 ? 1.8 : 3;
 
 /** Last value written for every per-card style, so unchanged frames write nothing. */
 type Slot = {
@@ -31,12 +35,14 @@ type Slot = {
 export default function Hero() {
   const deal = useMotionValue(0);
   const lift = useMotionValue(0);
+  const sky = useMotionValue(0);
+  const inset = useMotionValue(0);
   const [entering, setEntering] = useState(true);
   const [copy, setCopy] = useState<false | "fade" | "instant">(false);
 
   const frame = useRef<HTMLElement>(null);
   const scene = useRef<HTMLDivElement>(null);
-  const counter = useRef<HTMLSpanElement>(null);
+  const digits = useRef<(HTMLSpanElement | null)[]>([]);
   const slots = useRef<Slot[]>(
     cards.map(() => ({ el: null, video: null, t: "", v: "", playing: false })),
   );
@@ -44,73 +50,87 @@ export default function Hero() {
   const loaded = useRef(0);
   const done = useRef(false);
   const anims = useRef<AnimationPlaybackControls[]>([]);
-  const copyTimer = useRef(0);
+  const timers = useRef<number[]>([]);
   const g = useRef({
     target: 0, rot: 0, vel: 0,
     down: false, dragging: false, suppress: false,
     startX: 0, lastX: 0, lastT: 0,
   });
 
-  const skyOpacity = useTransform(lift, [0, 0.45], [0, 1]);
   const cloudY = useTransform(lift, [0, 1], ["105%", "0%"]);
-  const loaderOpacity = useTransform(lift, [0, 0.2], [1, 0]);
+  const loaderOpacity = useTransform(sky, [0, 0.6], [1, 0]);
+  const markScale = useTransform(lift, [0, 1], [WORDMARK_SCALE, 1]);
+
+  const later = (ms: number, fn: () => void) => timers.current.push(window.setTimeout(fn, ms));
+  const stopAll = () => {
+    anims.current.forEach((a) => a.stop());
+    timers.current.forEach(clearTimeout);
+  };
 
   // Ends the entrance instantly: Escape, Tab, the skip button, reduced motion.
   const finish = () => {
     if (done.current) return;
     done.current = true;
-    anims.current.forEach((a) => a.stop());
-    clearTimeout(copyTimer.current);
+    stopAll();
     deal.set(1);
+    sky.set(1);
     lift.set(1);
+    inset.set(1);
     setEntering(false);
     setCopy("instant");
   };
 
-  // Entrance: decode every cover, deal, then lift once dealt and ready.
+  // Entrance: decode every image, deal, fade the sky in, then lift.
   useEffect(() => {
     if (reduced) return finish();
     let cancelled = false;
     let n = 0;
     Promise.all(
-      covers.map((src) => {
+      assets.map((src) => {
         const img = new Image();
         img.src = src;
         return img
           .decode()
           .catch(() => {})
-          .then(() => void (loaded.current = ++n / covers.length));
+          .then(() => void (loaded.current = ++n / assets.length));
       }),
     ).then(() => {
       if (cancelled || done.current) return;
-      // ponytail: "ready" is the covers only; add video previews here if cards get clips.
+      // ponytail: "ready" is the images only; add video previews here if cards get clips.
       anims.current.push(
         animate(deal, 1, {
           duration: 2.6,
           ease: "linear",
           onComplete: () => {
             if (cancelled || done.current) return;
-            copyTimer.current = window.setTimeout(() => setCopy("fade"), 1000);
-            anims.current.push(
-              animate(lift, 1, {
-                duration: 1.9,
-                ease: LIFT_EASE,
-                onComplete: () => {
-                  done.current = true;
-                  setEntering(false);
-                },
-              }),
-            );
+            anims.current.push(animate(sky, 1, { duration: 0.5, ease: "easeOut" }));
+            later(250, () => {
+              anims.current.push(
+                animate(lift, 1, {
+                  duration: 1.9,
+                  ease: LIFT_EASE,
+                  onComplete: () => {
+                    done.current = true;
+                    setEntering(false);
+                  },
+                }),
+              );
+              later(1000, () => setCopy("fade"));
+            });
           },
         }),
       );
     });
     return () => {
       cancelled = true;
-      anims.current.forEach((a) => a.stop());
-      clearTimeout(copyTimer.current);
+      stopAll();
     };
   }, []);
+
+  // The hero closes into a rounded panel as the header and headline arrive.
+  useEffect(() => {
+    if (copy === "fade") anims.current.push(animate(inset, 1, { duration: 0.9, ease: [0.65, 0, 0.2, 1] }));
+  }, [copy]);
 
   useEffect(() => {
     if (!entering) return;
@@ -136,7 +156,7 @@ export default function Hero() {
     let raf = 0;
     let last = performance.now();
     let sceneT = "";
-    let count = "";
+    const digitT = ["", "", ""];
     const tick = (now: number) => {
       const dt = Math.min((now - last) / 1000, 0.05);
       last = now;
@@ -154,8 +174,14 @@ export default function Hero() {
       const t = `scale(${(fit.current * (1 + 0.14 * L)).toFixed(4)}) rotateX(${(12 * L).toFixed(2)}deg)`;
       if (t !== sceneT) scene.current!.style.transform = sceneT = t;
 
-      const c = String(Math.round(loaded.current * 100)).padStart(3, "0");
-      if (c !== count && counter.current) counter.current.textContent = count = c;
+      // Odometer: never ahead of what has actually loaded.
+      const pct = Math.round(100 * Math.min(loaded.current, D / 0.6));
+      const ds = [Math.floor(pct / 100), Math.floor(pct / 10) % 10, pct % 10];
+      for (let k = 0; k < 3; k++) {
+        const el = digits.current[k];
+        const v = `translateY(${-ds[k] * 10}%)`;
+        if (el && v !== digitT[k]) el.style.transform = digitT[k] = v;
+      }
 
       const live = L > 0.6 && !reduced;
       for (let i = 0; i < N; i++) {
@@ -232,7 +258,9 @@ export default function Hero() {
     s.down = s.dragging = false;
   };
 
-  const show = copy ? { opacity: 1, y: 0 } : { opacity: 0, y: 18 };
+  const show = copy ? { opacity: 1, y: 0 } : { opacity: 0, y: 14 };
+  const ease = [0.2, 0.7, 0.2, 1] as const;
+  const fade = (delay = 0) => (copy === "instant" ? { duration: 0 } : { duration: 0.9, delay, ease });
 
   return (
     <section
@@ -251,123 +279,115 @@ export default function Hero() {
       }}
       onDragStart={(e) => e.preventDefault()}
     >
-      <motion.div className="sky" style={{ opacity: skyOpacity }} aria-hidden />
+      <motion.div className="stage" style={{ "--k": inset } as never}>
+        <motion.img className="sky" src={skyImg} alt="" style={{ opacity: sky }} />
 
-      <div className="scene" ref={scene} role="list" aria-label="Selected work">
-        {cards.map((w, i) => (
-          <a
-            key={i}
-            role="listitem"
-            ref={(el) => void (slots.current[i].el = el)}
-            className="card"
-            href={w.href}
-            target={w.href.startsWith("http") ? "_blank" : undefined}
-            rel="noreferrer"
-            draggable={false}
-            style={{ visibility: "hidden" }}
-          >
-            <span className="face front">
-              <img src={w.cover} alt="" draggable={false} />
-              {w.video && (
-                <video
-                  ref={(el) => void (slots.current[i].video = el)}
-                  src={w.video}
-                  muted
-                  loop
-                  playsInline
-                  preload="none"
-                  onPlaying={(e) => e.currentTarget.classList.add("on")}
-                />
-              )}
-              <span className="cap" aria-hidden>{w.title}</span>
-            </span>
-            <span className="face back" aria-hidden>
-              <span>{person.monogram}</span>
-            </span>
-            <span className="sr">
-              {w.href.startsWith("http")
-                ? `${w.title}, ${w.category} for ${w.client}, ${w.year} (opens in a new tab)`
-                : w.title}
-            </span>
-          </a>
-        ))}
-      </div>
+        <div className="scene" ref={scene} role="list" aria-label="Selected work">
+          {cards.map((w, i) => (
+            <a
+              key={i}
+              role="listitem"
+              ref={(el) => void (slots.current[i].el = el)}
+              className="card"
+              href={w.href}
+              target={w.href.startsWith("http") ? "_blank" : undefined}
+              rel="noreferrer"
+              draggable={false}
+              style={{ visibility: "hidden" }}
+            >
+              <span className="face front">
+                <img src={w.cover} alt="" draggable={false} />
+                {w.video && (
+                  <video
+                    ref={(el) => void (slots.current[i].video = el)}
+                    src={w.video}
+                    muted
+                    loop
+                    playsInline
+                    preload="none"
+                    onPlaying={(e) => e.currentTarget.classList.add("on")}
+                  />
+                )}
+                <span className="cap" aria-hidden>{w.title}</span>
+              </span>
+              <span className="face back" aria-hidden>
+                <span>{person.monogram}</span>
+              </span>
+              <span className="sr">
+                {w.href.startsWith("http")
+                  ? `${w.title}, ${w.category} for ${w.client}, ${w.year} (opens in a new tab)`
+                  : w.title}
+              </span>
+            </a>
+          ))}
+        </div>
 
-      <motion.div className="clouds" style={{ y: cloudY }} aria-hidden>
-        <Clouds />
+        <motion.img className="clouds" src={cloudsImg} alt="" style={{ y: cloudY }} draggable={false} />
       </motion.div>
 
-      <motion.header
-        className="bar"
-        initial={false}
-        animate={show}
-        transition={copy === "instant" ? { duration: 0 } : { duration: 0.8, ease: [0.2, 0.7, 0.2, 1] }}
-      >
-        <a href="#top" className="mark">{person.monogram}</a>
-        <nav>
+      <header className="bar">
+        <a href="#top" className="mark" aria-label={person.name}>
+          <motion.span className="mark-scale" style={{ scale: markScale }}>
+            <span className={entering && !reduced ? "typed" : undefined} aria-hidden>
+              {[...first].map((ch, i) => (
+                <span key={i} className="ch" style={{ animationDelay: `${0.15 + i * 0.11}s` }}>{ch}</span>
+              ))}
+              {/* The typed full stop gives way to the surname. */}
+              <motion.span
+                className="dot"
+                initial={false}
+                animate={copy ? { opacity: 0, width: 0 } : { opacity: 1, width: "auto" }}
+                transition={fade()}
+              >
+                <span className="ch" style={{ animationDelay: `${0.15 + first.length * 0.11}s` }}>.</span>
+              </motion.span>
+            </span>
+          </motion.span>
+          <motion.span className="mark-rest" aria-hidden initial={false} animate={{ opacity: copy ? 1 : 0 }} transition={fade()}>
+            {rest.join(" ")}.
+          </motion.span>
+        </a>
+        <motion.nav initial={false} animate={show} transition={fade(0.1)}>
           <a href="#work">Work</a>
           <a href="#about">About</a>
           <a href="#experience">Experience</a>
           <a href="#contact">Contact</a>
-        </nav>
-        <a className="pill" href="resume.pdf" target="_blank" rel="noreferrer">Resume</a>
-      </motion.header>
+        </motion.nav>
+        <motion.a className="pill" href="resume.pdf" target="_blank" rel="noreferrer" initial={false} animate={show} transition={fade(0.15)}>
+          Resume
+        </motion.a>
+      </header>
 
-      <motion.div
-        className="headline"
-        initial={false}
-        animate={show}
-        transition={copy === "instant" ? { duration: 0 } : { duration: 1, delay: 0.15, ease: [0.2, 0.7, 0.2, 1] }}
-      >
-        <p className="eyebrow">{person.title}</p>
-        <h1>{person.name}</h1>
-        <p className="lede">
-          Editing {roles.slice(0, -1).join(", ")} and {roles.at(-1)}. Drag the reel to look around.
+      <motion.div className="headline" initial={false} animate={show} transition={fade(0.2)}>
+        <h1>
+          {person.name} edits <u>cinematic stories</u>, <u>brand campaigns</u>,
+          {" "}<u>motion graphics</u> and sound that lands.
+        </h1>
+        <p className="meta">
+          5+ years · {experience.length} studios & brands
+          <br />
+          <span>Drag the reel to look around</span>
         </p>
       </motion.div>
 
       {entering && (
         <motion.div className="loader" style={{ opacity: loaderOpacity }}>
-          <span className="count" aria-live="off">
-            <span ref={counter}>000</span>
-          </span>
+          <div className="count" aria-hidden>
+            {[0, 1, 2].map((k) => (
+              <span key={k} className="digit">
+                <span ref={(el) => void (digits.current[k] = el)} className="strip">
+                  0123456789
+                </span>
+              </span>
+            ))}
+            <sup>%</sup>
+            <small>Loading reels</small>
+          </div>
           <button type="button" className="skip" onClick={finish}>
             Skip intro
           </button>
         </motion.div>
       )}
     </section>
-  );
-}
-
-/** Opaque cloud bank: three rows of lumps, each filled solid down to the bottom. */
-function Clouds() {
-  let seed = 7;
-  const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
-  const row = (base: number, rMin: number, rMax: number) => {
-    const out: [number, number, number][] = [];
-    for (let x = -120; x < 1720; ) {
-      const r = rMin + rnd() * (rMax - rMin);
-      out.push([x, base - r * 0.35 + rnd() * 24, r]);
-      x += r * 1.05;
-    }
-    return out;
-  };
-  const layers = [
-    { base: 210, r: [60, 120], fill: "#d9a99a" },
-    { base: 300, r: [70, 130], fill: "#e8c7b5" },
-    { base: 400, r: [80, 150], fill: "#f3ece2" },
-  ];
-  return (
-    <svg viewBox="0 0 1600 700" preserveAspectRatio="xMidYMin slice">
-      {layers.map((l) => (
-        <g key={l.base} fill={l.fill}>
-          {row(l.base, l.r[0], l.r[1]).map(([cx, cy, r], i) => (
-            <circle key={i} cx={cx} cy={cy} r={r} />
-          ))}
-          <rect x={-200} y={l.base} width={2000} height={700 - l.base} />
-        </g>
-      ))}
-    </svg>
   );
 }

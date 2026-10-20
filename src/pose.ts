@@ -21,7 +21,7 @@ export function pose(i: number, deal: number, lift: number, rot: number): Pose {
   const p = easeOutCubic((deal - dealOrder(i) * 0.6) / 0.4);
   const radius = 580 + 430 * lift;
   const pivotY = 500 + 314 * lift;
-  const angle = wrap(i * STEP + 70 * (1 - p) - 28 * lift - rot);
+  const angle = wrap(i * STEP - 28 * lift - rot);
   const dist = -140 + (radius + 140) * p;
   const flip = 180 * (1 - p);
   const s = (0.7 + 0.3 * p) * (1 + 0.35 * lift);
