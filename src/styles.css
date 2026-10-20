@@ -35,12 +35,14 @@ h1, h2, h3 { font-family: var(--serif); font-weight: 400; line-height: 1.1; marg
 /* ---------- hero frame ---------- */
 
 .hero {
+  --top: 56px;
+  --side: 12px;
+  --foot: clamp(150px, 24svh, 230px);
   position: relative;
   height: 100svh;
   min-height: 560px;
   overflow: hidden;
-  background: var(--ink);
-  perspective: 1600px;
+  background: var(--paper);
   touch-action: pan-y;
   user-select: none;
   -webkit-user-select: none;
@@ -48,13 +50,23 @@ h1, h2, h3 { font-family: var(--serif); font-weight: 400; line-height: 1.1; marg
 }
 .hero:active { cursor: grabbing; }
 
+/* Everything that becomes the rounded panel. --k runs 0 (full bleed) to 1 (inset). */
+.stage {
+  position: absolute; inset: 0;
+  background: #f6f4ef;
+  perspective: 1600px;
+  clip-path: inset(
+    calc(var(--k) * var(--top)) calc(var(--k) * var(--side))
+    calc(var(--k) * var(--foot)) calc(var(--k) * var(--side))
+    round calc(var(--k) * 18px)
+  );
+}
+
 .sky {
   position: absolute; inset: 0;
-  background:
-    radial-gradient(60% 40% at 50% 74%, #ffd9a8cc, transparent 70%),
-    radial-gradient(40% 30% at 18% 30%, #8d6fa255, transparent 70%),
-    radial-gradient(50% 30% at 85% 22%, #5f79b055, transparent 70%),
-    linear-gradient(180deg, #0f1631 0%, #253260 26%, #5a5d8e 48%, #b97f95 66%, #eeb48c 82%, #f7dcc0 100%);
+  width: 100%; height: 100%;
+  object-fit: cover;
+  object-position: 50% 30%;
 }
 
 .scene {
@@ -118,49 +130,84 @@ h1, h2, h3 { font-family: var(--serif); font-weight: 400; line-height: 1.1; marg
   letter-spacing: 0.04em;
 }
 
+/* Opaque cloud bank in front of the wheel's lower half. */
 .clouds {
-  position: absolute; left: 0; right: 0; bottom: 0;
-  height: 50%;
+  position: absolute; left: 0; bottom: 0;
+  width: 100%; height: 58%;
+  object-fit: cover;
+  object-position: 50% 0;
   pointer-events: none;
 }
-.clouds svg { display: block; width: 100%; height: 100%; }
 
 .bar {
   position: absolute; top: 0; left: 0; right: 0; z-index: 3;
+  height: var(--top);
   display: flex; align-items: center; gap: 24px;
-  padding: 18px clamp(16px, 4vw, 48px);
-  color: #f6eee4;
+  padding: 0 calc(var(--side) + 10px);
+  color: var(--text);
 }
-.mark { font-family: var(--serif); font-size: 22px; text-decoration: none; }
-.bar nav { display: flex; gap: 22px; margin-left: auto; font-size: 15px; }
-.bar nav a { text-decoration: none; opacity: 0.85; }
-.bar nav a:hover { opacity: 1; }
+.mark {
+  font-family: var(--serif); font-size: 20px;
+  text-decoration: none; white-space: nowrap;
+}
+.mark-scale { display: inline-block; transform-origin: 0 25%; }
+.typed .ch { opacity: 0; animation: type 0.01s steps(1) forwards; }
+.dot { display: inline-block; overflow: hidden; vertical-align: bottom; }
+.mark-rest { margin-left: 0.28em; }
+@keyframes type { to { opacity: 1; } }
+.bar nav { display: flex; gap: 18px; margin-left: auto; font-size: 14px; }
+.bar nav a { text-decoration: none; color: var(--muted); }
+.bar nav a:hover { color: var(--text); }
 .pill {
-  text-decoration: none; font-size: 14px;
-  padding: 7px 16px; border-radius: 99px;
-  border: 1px solid #f6eee499;
+  text-decoration: none; font-size: 13px;
+  padding: 5px 14px; border-radius: 99px;
+  border: 1px solid #1b1a1740;
 }
 
 .headline {
-  position: absolute; left: 0; right: 0; bottom: clamp(24px, 7vh, 72px); z-index: 3;
-  text-align: center; padding: 0 16px;
-  pointer-events: none;
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 3;
+  height: var(--foot);
+  display: flex; align-items: center; justify-content: space-between; gap: 24px;
+  padding: 0 calc(var(--side) + 10px);
 }
-.headline a { pointer-events: auto; }
-.eyebrow { margin: 0 0 6px; font-size: 13px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent); }
-.headline h1 { font-size: clamp(44px, 8vw, 104px); letter-spacing: -0.02em; }
-.lede { margin: 10px auto 0; max-width: 34em; color: var(--muted); }
+.headline h1 {
+  font-size: clamp(20px, 2.4vw, 34px);
+  line-height: 1.25;
+  max-width: 24em;
+}
+.headline u { text-decoration-color: var(--accent); text-underline-offset: 5px; text-decoration-thickness: 1px; }
+.meta { margin: 0; text-align: right; font-size: 14px; color: var(--muted); white-space: nowrap; }
+.meta span { font-size: 12px; }
 
 .loader {
-  position: absolute; left: 0; right: 0; bottom: 0; z-index: 4;
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 20px clamp(16px, 4vw, 48px);
-  color: #e9d8c3;
+  position: absolute; inset: 0; z-index: 4;
+  pointer-events: none;
 }
-.count { font-family: var(--serif); font-size: 28px; font-variant-numeric: tabular-nums; }
+.count {
+  position: absolute; top: 18px; right: 28px;
+  display: flex; align-items: flex-start;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: clamp(44px, 6vw, 76px);
+  line-height: 1;
+  color: var(--text);
+}
+.digit { display: block; height: 1em; overflow: hidden; }
+.strip {
+  display: block; width: 1ch;
+  word-break: break-all;
+  transition: transform 0.45s cubic-bezier(0.3, 0.7, 0.2, 1);
+}
+.count sup { font-size: 12px; margin: 6px 0 0 4px; }
+.count small {
+  position: absolute; right: 0; top: calc(100% + 6px);
+  font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted);
+  white-space: nowrap;
+}
 .skip {
-  font: inherit; font-size: 14px; color: inherit; cursor: pointer;
-  background: none; border: 1px solid #e9d8c366; border-radius: 99px; padding: 7px 16px;
+  position: absolute; right: 24px; bottom: 22px;
+  pointer-events: auto;
+  font: inherit; font-size: 13px; color: var(--muted); cursor: pointer;
+  background: none; border: 1px solid #1b1a1733; border-radius: 99px; padding: 6px 14px;
 }
 
 /* ---------- page ---------- */
@@ -214,7 +261,12 @@ main h3 { font-size: 22px; }
 footer { text-align: center; padding: 24px 16px 40px; color: var(--muted); font-size: 14px; border-top: 1px solid var(--paper-2); }
 
 @media (max-width: 720px) {
+  .hero { --foot: clamp(170px, 28svh, 240px); }
+  .clouds { height: 44%; }
+  .count { font-size: 40px; right: 20px; }
   .bar nav { display: none; }
+  .headline { flex-direction: column; align-items: flex-start; justify-content: center; gap: 10px; }
+  .meta { text-align: left; }
   .bar .pill { margin-left: auto; }
   .about, .stack, .timeline > li { grid-template-columns: 1fr; }
   .timeline > li { gap: 4px; }
