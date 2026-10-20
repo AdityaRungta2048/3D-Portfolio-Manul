@@ -23,7 +23,7 @@ export default function App() {
 
         <section id="work">
           <div className="head">
-            <h2>Selected creatives</h2>
+            <h2>Creatives</h2>
             <a href={driveUrl} target="_blank" rel="noreferrer">Full Drive folder ↗</a>
           </div>
           <ul className="grid">
