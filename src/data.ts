@@ -103,6 +103,7 @@ export const tools = [
   "Higgsfield",
   "ChatGPT",
   "Gemini",
+  "Claude",
 ];
 
 export const education = {
