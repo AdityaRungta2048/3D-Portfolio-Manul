@@ -130,12 +130,12 @@ h1, h2, h3 { font-family: var(--serif); font-weight: 400; line-height: 1.1; marg
   letter-spacing: 0.04em;
 }
 
-/* Opaque cloud bank in front of the wheel's lower half. */
+/* Opaque cloud bank in front of the wheel's lower half; framed exactly like the sky. */
 .clouds {
-  position: absolute; left: 0; bottom: 0;
-  width: 100%; height: 58%;
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
   object-fit: cover;
-  object-position: 50% 0;
+  object-position: 50% 30%;
   pointer-events: none;
 }
 
@@ -262,7 +262,6 @@ footer { text-align: center; padding: 24px 16px 40px; color: var(--muted); font-
 
 @media (max-width: 720px) {
   .hero { --foot: clamp(170px, 28svh, 240px); }
-  .clouds { height: 44%; }
   .count { font-size: 40px; right: 20px; }
   .bar nav { display: none; }
   .headline { flex-direction: column; align-items: flex-start; justify-content: center; gap: 10px; }
