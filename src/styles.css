@@ -162,7 +162,7 @@ h1, h2, h3 { font-family: var(--serif); font-weight: 400; line-height: 1.1; marg
 }
 .mark-scale { display: inline-block; transform-origin: 0 25%; }
 .typed .ch { opacity: 0; animation: type 0.01s steps(1) forwards; }
-.dot { display: inline-block; overflow: hidden; vertical-align: bottom; }
+.mark-dot { display: inline-block; overflow: hidden; vertical-align: bottom; }
 .mark-rest { margin-left: 0.28em; }
 @keyframes type { to { opacity: 1; } }
 .bar nav { display: flex; gap: 18px; margin-left: auto; font-size: 14px; }
@@ -356,7 +356,7 @@ main section.work { max-width: none; padding: 0; margin-top: clamp(72px, 10vw, 1
 .timeline { list-style: none; padding: 0; margin: 0; position: relative; }
 .timeline::before { content: ""; position: absolute; left: 7px; top: 8px; bottom: 8px; width: 1px; background: linear-gradient(var(--accent), var(--paper-2)); }
 .timeline > li { position: relative; display: grid; grid-template-columns: 190px 1fr; gap: 28px; padding: 0 0 44px 40px; }
-.dot { position: absolute; left: 0; top: 6px; width: 15px; height: 15px; border-radius: 50%; background: var(--paper); border: 2px solid var(--accent); }
+.timeline .dot { position: absolute; left: 0; top: 6px; width: 15px; height: 15px; border-radius: 50%; background: var(--paper); border: 2px solid var(--accent); }
 .now .dot { background: var(--accent); box-shadow: 0 0 0 0 #b5523b66; animation: pulse 2.2s infinite; }
 @keyframes pulse { 70% { box-shadow: 0 0 0 12px #b5523b00; } 100% { box-shadow: 0 0 0 0 #b5523b00; } }
 .period { align-self: start; margin: 2px 0 0; font-size: 15px; color: var(--muted); display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
@@ -428,6 +428,7 @@ footer a { color: var(--muted); }
   .headline { flex-direction: column; align-items: flex-start; justify-content: center; gap: 10px; }
   .meta { text-align: left; }
   .count { font-size: 40px; right: 20px; }
+  .scene { top: 64%; } /* the narrow wheel sits lower so it meets the clouds */
   .about, .stack, .banners { grid-template-columns: 1fr; }
   .portrait { max-width: 320px; }
   .stats { grid-template-columns: 1fr 1fr; row-gap: 22px; }
